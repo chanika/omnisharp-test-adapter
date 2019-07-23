@@ -1,26 +1,28 @@
 {
-  "name": "vscode-example-test-adapter",
-  "displayName": "Example Test Explorer",
-  "description": "Run your Example tests in the Sidebar of Visual Studio Code",
+  "name": "omnisharp-test-adapter",
+  "displayName": "TestExplorerUI Adapter backed by Omnisharp",
+  "description": "Run tests discovered by omnisharp",
   "icon": "img/icon.png",
-  "author": "Holger Benl <hbenl@evandor.de>",
-  "publisher": "hbenl",
+  "author": "Cody and Dmitry",
+  "publisher": "chanika",
   "version": "0.0.1",
   "license": "MIT",
-  "homepage": "https://github.com/hbenl/vscode-example-test-adapter",
+  "homepage": "https://github.com/chanika/omnisharp-test-adapter",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hbenl/vscode-example-test-adapter.git"
+    "url": "https://github.com/chanika/omnisharp-test-adapter.git"
   },
   "bugs": {
-    "url": "https://github.com/hbenl/vscode-example-test-adapter/issues"
+    "url": "https://github.com/chanika/omnisharp-test-adapter/issues"
   },
   "categories": [
     "Other"
   ],
   "keywords": [
     "test",
-    "testing"
+    "testing",
+    "vscode",
+    "omnisharp"
   ],
   "main": "out/main.js",
   "scripts": {
