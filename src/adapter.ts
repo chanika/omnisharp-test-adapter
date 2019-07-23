@@ -3,11 +3,7 @@ import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStarte
 import { Log } from 'vscode-test-adapter-util';
 import { loadFakeTests, runFakeTests } from './fakeTests';
 
-/**
- * This class is intended as a starting point for implementing a "real" TestAdapter.
- * The file `README.md` contains further instructions.
- */
-export class ExampleAdapter implements TestAdapter {
+export class OmniSharpAdapter implements TestAdapter {
 
 	private disposables: { dispose(): void }[] = [];
 
@@ -24,7 +20,7 @@ export class ExampleAdapter implements TestAdapter {
 		private readonly log: Log
 	) {
 
-		this.log.info('Initializing example adapter');
+		this.log.info('Initializing omnisharp adapter');
 
 		this.disposables.push(this.testsEmitter);
 		this.disposables.push(this.testStatesEmitter);
@@ -34,7 +30,7 @@ export class ExampleAdapter implements TestAdapter {
 
 	async load(): Promise<void> {
 
-		this.log.info('Loading example tests');
+		this.log.info('Enumerating tests from OmniSharp');
 
 		this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
 
@@ -46,11 +42,10 @@ export class ExampleAdapter implements TestAdapter {
 
 	async run(tests: string[]): Promise<void> {
 
-		this.log.info(`Running example tests ${JSON.stringify(tests)}`);
+		this.log.info(`Running tests ${JSON.stringify(tests)}`);
 
 		this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
 
-		// in a "real" TestAdapter this would start a test run in a child process
 		await runFakeTests(tests, this.testStatesEmitter);
 
 		this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
