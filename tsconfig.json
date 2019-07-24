@@ -13,7 +13,9 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/main.ts"
+    "src/main.ts",
+    "src/adapter.ts",
+    "src/omnisharpClient.ts"
   ]
 }
   
