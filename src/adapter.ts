@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, TestInfo} from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
-import { OmniSharpTest, OmniSharpClient } from './omnisharpClient';
+import { OmniSharpTest, OmniSharpClient, OmniSharpTestResult } from './omnisharpClient';
 import * as path from 'path';
 
 export class OmniSharpAdapter implements TestAdapter {
@@ -36,7 +36,7 @@ export class OmniSharpAdapter implements TestAdapter {
 		console.log('Enumerating tests from OmniSharp');
 		if (!this.omnisharpClient) {
 			console.log('connecting client for load() call');
-			var client = new OmniSharpClient(result => this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: result.Id, state: this.mapOmniSharpResultTypeToTestExplorerType(result.Outcome), message: result.ErrorMessage + '\n' + result.ErrorStackTrace }));
+			var client = new OmniSharpClient((result: OmniSharpTestResult) => this.onTestCompleted(result));
 			await client.connect();
 			this.omnisharpClient = client;
 		}
@@ -53,6 +53,15 @@ export class OmniSharpAdapter implements TestAdapter {
 		this.rootTestNode = testExplorerSuite;
 
 		this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: testExplorerSuite });
+	}
+
+	onTestCompleted(result: OmniSharpTestResult) {
+		const stateValue: string = this.mapOmniSharpResultTypeToTestExplorerType(result.Outcome);
+		var message = null;
+		if (stateValue === "failed"){
+			message = result.ErrorMessage + '\n' + result.ErrorStackTrace;
+		}
+		this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: result.Id, state: stateValue, message: message })
 	}
 
 	storeTestsById(omnisharpTests: OmniSharpTest[]) {
@@ -169,14 +178,18 @@ export class OmniSharpAdapter implements TestAdapter {
 	}
 
 	private mapOmniSharpResultTypeToTestExplorerType(outcome: string): string {
-		switch(outcome) {
-			case "Passed":
+		switch(outcome.toLowerCase()) {
+			case "passed":
 				return "passed";
-			case "Failed":
+			case "failed":
 				return "failed";
-			case "Skipped":
+			case "skipped":
 				return "skipped";
-			case "NotFound":
+			case "notfound":
+				return "errored";
+			case "running":
+				return "running";
+			default:
 				return "errored";
 		}
 		return "errored";
