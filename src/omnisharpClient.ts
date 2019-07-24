@@ -38,12 +38,26 @@ export class OmniSharpTest {
     Label: string = "";
     Line: number = 0;
 }
+
+export class OmniSharpTestResult {
+    Id: string = "";
+    Outcome: string = "";
+    ErrorMessage: string = "";
+    ErrorStackTrace: string = "";
+}
+
 export class OmniSharpClient {
 
     private socketClient: net.Socket;
+    private buffer: string;
     private outstandingResolveFunc: (value: OmniSharpTest[]) => void;
-    constructor() {
+    private outstandingRunTestResult: () => void;
+    private readonly testFinishedFunc: (result: OmniSharpTestResult) => void;
+
+    constructor(testFinishedFunc: (result: OmniSharpTestResult) => void) {
         this.outstandingResolveFunc = () => [];
+        this.buffer = "";
+        this.testFinishedFunc = testFinishedFunc;
     }
 
     public async connect(): Promise<void> {
@@ -79,7 +93,23 @@ export class OmniSharpClient {
             socket.on('data', data => {
                 console.log('Received: ' + data);
                 var stringData = data.toString();
-                this.outstandingResolveFunc(JSON.parse(stringData) as OmniSharpTest[]);
+                if (!stringData.endsWith("<EOF>")) {
+                    this.buffer += stringData;
+                    return;
+                }
+                this.buffer += stringData;
+                var trimmedData = this.buffer.substring(0, this.buffer.lastIndexOf("<EOF>"));
+                var response = JSON.parse(trimmedData);
+                this.buffer = "";
+                console.log("Received message of type: " + response.MessageType)
+                if (response.MessageType == "enumtests") {
+                    this.outstandingResolveFunc(response.Payload as OmniSharpTest[]);
+                } else if (response.MessageType == "runtests") {
+                    for (var result of response.Payload) {
+                        this.testFinishedFunc(result);
+                    }
+                    this.outstandingRunTestResult();
+                }
             });
 
             socket.on('error', function (data) {
@@ -110,7 +140,12 @@ export class OmniSharpClient {
         });
     }
 
-    async runTests(tests: OmniSharpTest[]) : Promise<void> {
-        
+    async runTest(test: OmniSharpTest): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.outstandingRunTestResult = resolve;
+            const jsonData: string = JSON.stringify({ MessageType: "runtests", Payload: [test] });
+            console.log("sending request to run tests: " + jsonData);
+            this.socketClient.write(jsonData + "<EOF>");
+        });
     }
 }

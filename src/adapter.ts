@@ -36,7 +36,7 @@ export class OmniSharpAdapter implements TestAdapter {
 		console.log('Enumerating tests from OmniSharp');
 		if (!this.omnisharpClient) {
 			console.log('connecting client for load() call');
-			var client = new OmniSharpClient();
+			var client = new OmniSharpClient(result => this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: result.Id, state: this.mapOmniSharpResultTypeToTestExplorerType(result.Outcome), message: result.ErrorMessage + '\n' + result.ErrorStackTrace }));
 			await client.connect();
 			this.omnisharpClient = client;
 		}
@@ -95,10 +95,17 @@ export class OmniSharpAdapter implements TestAdapter {
 
 		this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
 
+
+		var testObj = this.discoveredTests.get(tests[0])!;
+		this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: testObj.Id, state: 'running' });
+
+        await this.omnisharpClient.runTest(testObj);
+		//this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: testObj.Id, state: 'passed' });
+
 		for (const suiteOrTestId of tests) {
 			const node = this.findNode(this.rootTestNode, suiteOrTestId);
 			if (node) {
-				await this.runNode(node, this.testStatesEmitter);
+				//await this.runNode(node, this.testStatesEmitter);
 			}
 		}
 
@@ -117,7 +124,7 @@ export class OmniSharpAdapter implements TestAdapter {
 			return searchNode;
 		} else if (searchNode.type === 'suite') {
 			for (const child of searchNode.children) {
-				const found = findNode(child, id);
+				const found = this.findNode(child, id);
 				if (found) return found;
 			}
 		}
@@ -134,7 +141,7 @@ export class OmniSharpAdapter implements TestAdapter {
 			testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 
 			for (const child of node.children) {
-				await runNode(child, testStatesEmitter);
+				await this.runNode(child, testStatesEmitter);
 			}
 
 			testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
@@ -159,5 +166,19 @@ export class OmniSharpAdapter implements TestAdapter {
 			disposable.dispose();
 		}
 		this.disposables = [];
+	}
+
+	private mapOmniSharpResultTypeToTestExplorerType(outcome: string): string {
+		switch(outcome) {
+			case "Passed":
+				return "passed";
+			case "Failed":
+				return "failed";
+			case "Skipped":
+				return "skipped";
+			case "NotFound":
+				return "errored";
+		}
+		return "errored";
 	}
 }
