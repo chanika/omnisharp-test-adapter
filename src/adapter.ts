@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, TestInfo} from 'vscode-test-adapter-api';
+import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent, TestSuiteInfo, TestInfo } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
 import { OmniSharpTest, OmniSharpClient, OmniSharpTestResult } from './omnisharpClient';
 import * as path from 'path';
@@ -58,7 +58,7 @@ export class OmniSharpAdapter implements TestAdapter {
 	onTestCompleted(result: OmniSharpTestResult) {
 		const stateValue: string = this.mapOmniSharpResultTypeToTestExplorerType(result.Outcome);
 		var message = null;
-		if (stateValue === "failed"){
+		if (stateValue === "failed") {
 			message = result.ErrorMessage + '\n' + result.ErrorStackTrace;
 		}
 		this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: result.Id, state: stateValue, message: message })
@@ -104,17 +104,12 @@ export class OmniSharpAdapter implements TestAdapter {
 
 		this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
 
-
-		var testObj = this.discoveredTests.get(tests[0])!;
-		this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: testObj.Id, state: 'running' });
-
-        await this.omnisharpClient.runTest(testObj);
-		//this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: testObj.Id, state: 'passed' });
-
 		for (const suiteOrTestId of tests) {
 			const node = this.findNode(this.rootTestNode, suiteOrTestId);
 			if (node) {
-				//await this.runNode(node, this.testStatesEmitter);
+				var testsToRun = [] as OmniSharpTest[]; 
+				this.findAllTestsToRunAndMarkAsRunning(node, testsToRun);
+				await this.omnisharpClient.runTests(testsToRun);
 			}
 		}
 
@@ -127,6 +122,17 @@ export class OmniSharpAdapter implements TestAdapter {
 			// start a test run in a child process and attach the debugger to it...
 		}
 	*/
+
+	private findAllTestsToRunAndMarkAsRunning(searchNode: TestSuiteInfo | TestInfo, results: OmniSharpTest[]) {
+		if (searchNode.type === 'test') {
+			this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: searchNode.id, state: 'running' });
+			results.push(this.discoveredTests.get(searchNode.id)!);
+		} else {
+			for (var child of searchNode.children) {
+				this.findAllTestsToRunAndMarkAsRunning(child, results);
+			}
+		}
+	}
 
 	findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
 		if (searchNode.id === id) {
@@ -178,7 +184,7 @@ export class OmniSharpAdapter implements TestAdapter {
 	}
 
 	private mapOmniSharpResultTypeToTestExplorerType(outcome: string): string {
-		switch(outcome.toLowerCase()) {
+		switch (outcome.toLowerCase()) {
 			case "passed":
 				return "passed";
 			case "failed":

@@ -52,12 +52,14 @@ export class OmniSharpClient {
     private buffer: string;
     private outstandingResolveFunc: (value: OmniSharpTest[]) => void;
     private outstandingRunTestResult: () => void;
+    private runningTests : Set<string>; 
     private readonly testFinishedFunc: (result: OmniSharpTestResult) => void;
 
     constructor(testFinishedFunc: (result: OmniSharpTestResult) => void) {
         this.outstandingResolveFunc = () => [];
         this.buffer = "";
         this.testFinishedFunc = testFinishedFunc;
+        this.runningTests = new Set<string>();
     }
 
     public async connect(): Promise<void> {
@@ -107,8 +109,11 @@ export class OmniSharpClient {
                 } else if (response.MessageType == "runtests") {
                     for (var result of response.Payload) {
                         this.testFinishedFunc(result);
+                        this.runningTests.delete(result.Id);
                     }
-                    this.outstandingRunTestResult();
+                    if (this.runningTests.size === 0) {
+                        this.outstandingRunTestResult();
+                    }
                 }
             });
 
@@ -140,10 +145,13 @@ export class OmniSharpClient {
         });
     }
 
-    async runTest(test: OmniSharpTest): Promise<void> {
+    async runTests(tests: OmniSharpTest[]): Promise<void> {
         return new Promise((resolve, reject) => {
+            for (var test of tests) {
+                this.runningTests.add(test.Id);
+            }
             this.outstandingRunTestResult = resolve;
-            const jsonData: string = JSON.stringify({ MessageType: "runtests", Payload: [test] });
+            const jsonData: string = JSON.stringify({ MessageType: "runtests", Payload: tests });
             console.log("sending request to run tests: " + jsonData);
             this.socketClient.write(jsonData + "<EOF>");
         });
