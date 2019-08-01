@@ -1,36 +1,5 @@
 import * as net from 'net';
 
-const fakeOmnisharpResponse: object = [
-    {
-        File: "c:\\Enlist\\foo.cs",
-        Project: "foo",
-        Id: "DBS.Coordinator.BuildDispatcherTest.TestDispatch",
-        Label: "TestDispatch",
-        Line: 80
-    },
-    {
-        File: "c:\\Enlist\\foo.cs",
-        Project: "foo",
-        Id: "DBS.Coordinator.BuildDispatcherTest.LoadBuildTest",
-        Label: "LoadBuildTest",
-        Line: 81
-    },
-    {
-        File: "c:\\Enlist\\bar.cs",
-        Project: "foo",
-        Id: "DBS.Coordinator.WorkflowTest.GitClient",
-        Label: "GitClient",
-        Line: 11
-    },
-    {
-        File: "c:\\Enlist\\foo2.cs",
-        Project: "baz",
-        Id: "DBS.TaskDelegator.Enlister.SourceDepotTest",
-        Label: "SourceDepotTest",
-        Line: 1111
-    }
-];
-
 export class OmniSharpTest {
     File: string = "";
     Project: string = "";
@@ -82,7 +51,6 @@ export class OmniSharpClient {
 
     private createSocketClient(): Promise<void> {
         return new Promise((resolve, reject) => {
-
             var socket = new net.Socket();
             socket.connect(12345, 'localhost', function () {
                 console.log('Connecting to omnisharp');
@@ -116,7 +84,6 @@ export class OmniSharpClient {
                     }
                 }
             });
-
             socket.on('error', function (data) {
                 console.log('Error talking to omnisharp: ' + data);
             });
@@ -130,18 +97,10 @@ export class OmniSharpClient {
 
     enumerateAvailableTests(): Promise<OmniSharpTest[]> {
         return new Promise<OmniSharpTest[]>((resolve, reject) => {
-
             this.outstandingResolveFunc = resolve;
-            console.log("sending request to omnisharp for data");
+            console.log("Requesting list of tests from omnisharp");
             const jsonData: string = JSON.stringify({ MessageType: "enumtests", Payload: "" });
-            try {
-                console.log(this.socketClient == null);
-                var flushed: boolean = this.socketClient.write(jsonData + "<EOF>");
-                console.log("socket write result: " + flushed);
-                //resolve(JSON.parse(JSON.stringify(fakeOmnisharpResponse)) as OmniSharpTest[]);
-            } catch (error) {
-                console.log("caught error when trying to send data");
-            }
+            this.socketClient.write(jsonData + "<EOF>");
         });
     }
 

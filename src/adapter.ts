@@ -146,29 +146,6 @@ export class OmniSharpAdapter implements TestAdapter {
 		return undefined;
 	}
 
-	async runNode(
-		node: TestSuiteInfo | TestInfo,
-		testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
-	): Promise<void> {
-
-		if (node.type === 'suite') {
-
-			testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
-
-			for (const child of node.children) {
-				await this.runNode(child, testStatesEmitter);
-			}
-
-			testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-
-		} else { // node.type === 'test'
-
-			testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
-
-			testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'passed' });
-
-		}
-	}
 
 	cancel(): void {
 		// in a "real" TestAdapter this would kill the child process for the current test run (if there is any)
